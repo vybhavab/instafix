@@ -643,7 +643,7 @@
             const format = document.querySelector('input[name="format"]:checked').value;
             
             // Try to use Web Share API on mobile devices (allows saving to Photos on iOS)
-            if (navigator.share && navigator.canShare) {
+            if (navigator.share) {
                 try {
                     const blob = await new Promise(resolve => {
                         if (format === 'jpeg') {
@@ -657,7 +657,8 @@
                     const fileName = 'instafix-' + Date.now() + '.' + format;
                     const file = new File([blob], fileName, { type: blob.type });
                     
-                    if (navigator.canShare({ files: [file] })) {
+                    // Check if canShare exists and files can be shared
+                    if (!navigator.canShare || navigator.canShare({ files: [file] })) {
                         await navigator.share({
                             files: [file],
                             title: 'InstaFix Image'
