@@ -6,172 +6,379 @@
     <title>InstaFix - Image Aspect Ratio Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        #fileInput {
-            display: none;
-        }
-
-        .controls {
-            display: none;
-        }
-
-        .controls.active {
-            display: block;
-        }
-
-        .canvas-container {
-            display: none;
-        }
-
-        .canvas-container.active {
-            display: block;
-        }
-
         canvas {
             max-width: 100%;
             height: auto;
         }
+
+        /* Custom range slider styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #111827;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: #374151;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        input[type="range"]::-moz-range-track {
+            width: 100%;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #111827;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+            background: #374151;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        /* Mobile: limit canvas height */
+        @media (max-width: 768px) {
+            #canvasWrapper {
+                max-height: 50vh;
+                overflow: hidden;
+            }
+
+            #canvas {
+                max-height: 50vh;
+                width: auto;
+                margin: 0 auto;
+                display: block;
+            }
+        }
+
+        /* Full screen modal */
+        #imageModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 50;
+            padding: 20px;
+        }
+
+        #imageModal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #imageModal canvas {
+            max-width: 90vw;
+            max-height: 90vh;
+            object-fit: contain;
+        }
+
+        .upload-container {
+            min-height: 300px;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-4xl mx-auto">
+    <div class="max-w-7xl mx-auto">
         <!-- Header -->
         <div class="text-center mb-12">
             <h1 class="text-4xl font-bold text-gray-900 mb-2">InstaFix</h1>
             <p class="text-gray-600">Adjust images for any aspect ratio</p>
         </div>
 
-        <!-- Main Card -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-            <!-- Upload Area -->
-            <div id="uploadArea" class="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition-all">
-                <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                <p class="text-lg font-medium text-gray-900 mb-1">Click to upload or drag and drop</p>
-                <p class="text-sm text-gray-500">PNG, JPG, or GIF</p>
-                <input type="file" id="fileInput" accept="image/*" capture="environment">
-            </div>
-
-            <!-- Controls -->
-            <div class="controls mt-8 space-y-6" id="controls">
-                <!-- Aspect Ratio -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-900 mb-2">Aspect Ratio</label>
-                    <select id="aspectRatio" class="w-full rounded-lg border-gray-300 border px-4 py-2.5 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all">
-                        <option value="1:1">Square (1:1) - Instagram Post</option>
-                        <option value="4:5">Portrait (4:5) - Instagram Post</option>
-                        <option value="1.91:1">Landscape (1.91:1) - Instagram Post</option>
-                        <option value="9:16">Story (9:16) - Instagram Story/Reels</option>
-                        <option value="16:9">Landscape (16:9) - YouTube</option>
-                    </select>
-                </div>
-
-                <!-- Mode -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-900 mb-3">Mode</label>
-                    <div class="flex gap-3">
-                        <label class="flex-1 cursor-pointer">
-                            <input type="radio" id="modePad" name="mode" value="pad" checked class="peer sr-only">
-                            <div class="border-2 border-gray-300 rounded-lg px-4 py-3 text-center peer-checked:border-gray-900 peer-checked:bg-gray-900 peer-checked:text-white transition-all">
-                                <span class="font-medium">Add Padding</span>
-                            </div>
-                        </label>
-                        <label class="flex-1 cursor-pointer">
-                            <input type="radio" id="modeCrop" name="mode" value="crop" class="peer sr-only">
-                            <div class="border-2 border-gray-300 rounded-lg px-4 py-3 text-center peer-checked:border-gray-900 peer-checked:bg-gray-900 peer-checked:text-white transition-all">
-                                <span class="font-medium">Crop to Fit</span>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Padding Color -->
-                <div id="colorControls">
-                    <label class="block text-sm font-medium text-gray-900 mb-3">Padding Color</label>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="color" value="#FFFFFF" checked class="peer sr-only">
-                            <div class="border-2 border-gray-300 rounded-lg px-4 py-3 flex items-center gap-3 peer-checked:border-gray-900 transition-all">
-                                <div class="w-6 h-6 rounded border-2 border-gray-300 bg-white"></div>
-                                <span class="font-medium text-gray-900">White</span>
-                            </div>
-                        </label>
-
-                        <label class="cursor-pointer">
-                            <input type="radio" name="color" value="#000000" class="peer sr-only">
-                            <div class="border-2 border-gray-300 rounded-lg px-4 py-3 flex items-center gap-3 peer-checked:border-gray-900 transition-all">
-                                <div class="w-6 h-6 rounded bg-black"></div>
-                                <span class="font-medium text-gray-900">Black</span>
-                            </div>
-                        </label>
-
-                        <label class="cursor-pointer">
-                            <input type="radio" name="color" value="#F3F4F6" class="peer sr-only">
-                            <div class="border-2 border-gray-300 rounded-lg px-4 py-3 flex items-center gap-3 peer-checked:border-gray-900 transition-all">
-                                <div class="w-6 h-6 rounded bg-gray-100 border border-gray-300"></div>
-                                <span class="font-medium text-gray-900">Gray</span>
-                            </div>
-                        </label>
-
-                        <label class="cursor-pointer">
-                            <input type="radio" name="color" value="blur" class="peer sr-only">
-                            <div class="border-2 border-gray-300 rounded-lg px-4 py-3 flex items-center gap-3 peer-checked:border-gray-900 transition-all">
-                                <div class="w-6 h-6 rounded bg-gradient-to-br from-gray-400 to-gray-600"></div>
-                                <span class="font-medium text-gray-900">Blur</span>
-                            </div>
-                        </label>
-
-                        <label class="cursor-pointer col-span-2 sm:col-span-1">
-                            <input type="radio" name="color" id="customColorRadio" value="custom" class="peer sr-only">
-                            <div class="border-2 border-gray-300 rounded-lg px-4 py-3 flex items-center gap-3 peer-checked:border-gray-900 transition-all">
-                                <input type="color" id="customColor" value="#1F2937" class="w-6 h-6 rounded cursor-pointer border-0">
-                                <span class="font-medium text-gray-900">Custom</span>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Buttons -->
-                <div class="flex gap-3 pt-4">
-                    <button id="processBtn" class="flex-1 bg-gray-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-all">
-                        Process Image
-                    </button>
-                    <button id="resetBtn" class="px-6 py-3 rounded-lg font-medium border-2 border-gray-300 text-gray-700 hover:bg-gray-50 transition-all">
-                        Reset
-                    </button>
-                </div>
-            </div>
-
-            <!-- Canvas Container -->
-            <div class="canvas-container mt-8" id="canvasContainer">
-                <canvas id="canvas" class="w-full rounded-lg shadow-sm border border-gray-200"></canvas>
-                <div class="mt-6 text-center">
-                    <button id="downloadBtn" class="bg-gray-900 text-white px-8 py-3 rounded-lg font-medium hover:bg-gray-800 transition-all inline-flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Left Column: Image Preview / Upload Area -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 upload-container flex items-center justify-center">
+                <!-- Upload Area -->
+                <div id="uploadArea" class="w-full text-center">
+                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-12 cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition-all">
+                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
-                        Download Image
-                    </button>
+                        <p class="text-lg font-medium text-gray-900 mb-1">Click to upload or drag and drop</p>
+                        <p class="text-sm text-gray-500">PNG, JPG, or GIF</p>
+                        <input type="file" id="fileInput" accept="image/*" capture="environment" class="hidden">
+                    </div>
+                </div>
+
+                <!-- Image Preview -->
+                <div id="imagePreview" class="w-full hidden">
+                    <div id="canvasWrapper" class="bg-gray-100 rounded-xl p-4 flex items-center justify-center cursor-pointer group relative" title="Click to view full size">
+                        <canvas id="canvas" class="rounded-lg shadow-sm"></canvas>
+                        <!-- Mobile hint -->
+                        <div class="lg:hidden absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-70 text-white text-xs px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            Tap to view full size
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Controls -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+                <div id="controls" class="space-y-6 opacity-50 pointer-events-none">
+                    <!-- Aspect Ratio -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-900 mb-2">Aspect Ratio</label>
+                        <select id="aspectRatio" class="w-full rounded-lg border-gray-300 border px-4 py-2.5 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all">
+                            <option value="1:1">Square (1:1) - Instagram Post</option>
+                            <option value="4:5">Portrait (4:5) - Instagram Post</option>
+                            <option value="1.91:1">Landscape (1.91:1) - Instagram Post</option>
+                            <option value="9:16">Story (9:16) - Instagram Story/Reels</option>
+                            <option value="16:9">Landscape (16:9) - YouTube</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                        <div id="customRatioInputs" class="mt-3 hidden">
+                            <div class="flex gap-2 items-center">
+                                <input type="number" id="customWidth" placeholder="Width" min="1" max="100" class="flex-1 rounded-lg border-gray-300 border px-3 py-2 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none">
+                                <span class="text-gray-500">:</span>
+                                <input type="number" id="customHeight" placeholder="Height" min="1" max="100" class="flex-1 rounded-lg border-gray-300 border px-3 py-2 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mode -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-900 mb-3">Mode</label>
+                        <div class="flex gap-3">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" id="modePad" name="mode" value="pad" checked class="peer sr-only">
+                                <div class="border-2 border-gray-300 rounded-lg px-4 py-3 text-center peer-checked:border-gray-900 peer-checked:bg-gray-900 peer-checked:text-white transition-all">
+                                    <span class="font-medium">Add Padding</span>
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" id="modeCrop" name="mode" value="crop" class="peer sr-only">
+                                <div class="border-2 border-gray-300 rounded-lg px-4 py-3 text-center peer-checked:border-gray-900 peer-checked:bg-gray-900 peer-checked:text-white transition-all">
+                                    <span class="font-medium">Crop to Fit</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Padding Color -->
+                    <div id="colorControls">
+                        <label class="block text-sm font-medium text-gray-900 mb-3">Padding Color</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="color" value="#FFFFFF" checked class="peer sr-only">
+                                <div class="border-2 border-gray-300 rounded-lg px-4 py-3 flex items-center gap-3 peer-checked:border-gray-900 transition-all">
+                                    <div class="w-6 h-6 rounded border-2 border-gray-300 bg-white"></div>
+                                    <span class="font-medium text-gray-900">White</span>
+                                </div>
+                            </label>
+
+                            <label class="cursor-pointer">
+                                <input type="radio" name="color" value="#000000" class="peer sr-only">
+                                <div class="border-2 border-gray-300 rounded-lg px-4 py-3 flex items-center gap-3 peer-checked:border-gray-900 transition-all">
+                                    <div class="w-6 h-6 rounded bg-black"></div>
+                                    <span class="font-medium text-gray-900">Black</span>
+                                </div>
+                            </label>
+
+                            <label class="cursor-pointer">
+                                <input type="radio" name="color" value="#F3F4F6" class="peer sr-only">
+                                <div class="border-2 border-gray-300 rounded-lg px-4 py-3 flex items-center gap-3 peer-checked:border-gray-900 transition-all">
+                                    <div class="w-6 h-6 rounded bg-gray-100 border border-gray-300"></div>
+                                    <span class="font-medium text-gray-900">Gray</span>
+                                </div>
+                            </label>
+
+                            <label class="cursor-pointer">
+                                <input type="radio" name="color" value="blur" class="peer sr-only">
+                                <div class="border-2 border-gray-300 rounded-lg px-4 py-3 flex items-center gap-3 peer-checked:border-gray-900 transition-all">
+                                    <div class="w-6 h-6 rounded bg-gradient-to-br from-gray-400 to-gray-600"></div>
+                                    <span class="font-medium text-gray-900">Blur</span>
+                                </div>
+                            </label>
+
+                            <label class="cursor-pointer col-span-2">
+                                <input type="radio" name="color" id="customColorRadio" value="custom" class="peer sr-only">
+                                <div class="border-2 border-gray-300 rounded-lg px-4 py-3 flex items-center gap-3 peer-checked:border-gray-900 transition-all">
+                                    <input type="color" id="customColor" value="#1F2937" class="w-6 h-6 rounded cursor-pointer border-0">
+                                    <span class="font-medium text-gray-900">Custom Color</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Padding Amount -->
+                    <div id="paddingAmountControl">
+                        <label class="block text-sm font-medium text-gray-900 mb-3">
+                            Padding Amount
+                            <span id="paddingValue" class="text-gray-500 font-normal">0%</span>
+                        </label>
+                        <input type="range" id="paddingAmount" min="0" max="50" value="0" class="w-full">
+                    </div>
+
+                    <!-- File Format -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-900 mb-3">File Format</label>
+                        <div class="flex gap-3 mb-3">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" id="formatPNG" name="format" value="png" checked class="peer sr-only">
+                                <div class="border-2 border-gray-300 rounded-lg px-4 py-3 text-center peer-checked:border-gray-900 peer-checked:bg-gray-900 peer-checked:text-white transition-all">
+                                    <span class="font-medium">PNG</span>
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" id="formatJPEG" name="format" value="jpeg" class="peer sr-only">
+                                <div class="border-2 border-gray-300 rounded-lg px-4 py-3 text-center peer-checked:border-gray-900 peer-checked:bg-gray-900 peer-checked:text-white transition-all">
+                                    <span class="font-medium">JPEG</span>
+                                </div>
+                            </label>
+                        </div>
+                        <div id="jpegQualityControl" class="hidden">
+                            <label class="block text-sm font-medium text-gray-900 mb-2">
+                                Quality
+                                <span id="qualityValue" class="text-gray-500 font-normal">90%</span>
+                            </label>
+                            <input type="range" id="jpegQuality" min="1" max="100" value="90" class="w-full">
+                        </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="flex flex-col gap-3 pt-4">
+                        <div class="flex gap-3">
+                            <button id="copyBtn" class="flex-1 bg-gray-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-all inline-flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                                <span id="copyBtnText">Copy</span>
+                            </button>
+                            <button id="downloadBtn" class="flex-1 bg-gray-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-all inline-flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                </svg>
+                                Download
+                            </button>
+                        </div>
+                        <button id="resetBtn" class="w-full px-6 py-3 rounded-lg font-medium border-2 border-gray-300 text-gray-700 hover:bg-gray-50 transition-all">
+                            Reset
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Full Screen Image Modal -->
+    <div id="imageModal">
+        <button id="closeModal" class="absolute top-4 right-4 text-white hover:text-gray-300 z-10">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+        <canvas id="modalCanvas"></canvas>
     </div>
 
     <script>
         let originalImage = null;
         const fileInput = document.getElementById('fileInput');
         const uploadArea = document.getElementById('uploadArea');
+        const imagePreview = document.getElementById('imagePreview');
         const controls = document.getElementById('controls');
-        const canvasContainer = document.getElementById('canvasContainer');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+        const canvasWrapper = document.getElementById('canvasWrapper');
         const aspectRatioSelect = document.getElementById('aspectRatio');
-        const processBtn = document.getElementById('processBtn');
+        const customRatioInputs = document.getElementById('customRatioInputs');
+        const customWidth = document.getElementById('customWidth');
+        const customHeight = document.getElementById('customHeight');
         const downloadBtn = document.getElementById('downloadBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const copyBtnText = document.getElementById('copyBtnText');
         const resetBtn = document.getElementById('resetBtn');
         const colorControls = document.getElementById('colorControls');
+        const paddingAmountControl = document.getElementById('paddingAmountControl');
+        const paddingAmount = document.getElementById('paddingAmount');
+        const paddingValue = document.getElementById('paddingValue');
         const customColor = document.getElementById('customColor');
         const customColorRadio = document.getElementById('customColorRadio');
+        const jpegQualityControl = document.getElementById('jpegQualityControl');
+        const jpegQuality = document.getElementById('jpegQuality');
+        const qualityValue = document.getElementById('qualityValue');
+        const imageModal = document.getElementById('imageModal');
+        const modalCanvas = document.getElementById('modalCanvas');
+        const modalCtx = modalCanvas.getContext('2d');
+        const closeModal = document.getElementById('closeModal');
+
+        // Load settings from localStorage
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem('instafixSettings') || '{}');
+
+            if (settings.aspectRatio && settings.aspectRatio !== 'custom') {
+                aspectRatioSelect.value = settings.aspectRatio;
+            }
+            if (settings.mode) {
+                document.querySelector(`input[name="mode"][value="${settings.mode}"]`).checked = true;
+                const isPadMode = settings.mode === 'pad';
+                colorControls.style.display = isPadMode ? 'block' : 'none';
+                paddingAmountControl.style.display = isPadMode ? 'block' : 'none';
+            }
+            if (settings.color) {
+                const colorRadio = document.querySelector(`input[name="color"][value="${settings.color}"]`);
+                if (colorRadio) colorRadio.checked = true;
+            }
+            if (settings.customColor) {
+                customColor.value = settings.customColor;
+            }
+            if (settings.paddingAmount !== undefined) {
+                paddingAmount.value = settings.paddingAmount;
+                paddingValue.textContent = settings.paddingAmount + '%';
+            }
+            if (settings.format) {
+                document.querySelector(`input[name="format"][value="${settings.format}"]`).checked = true;
+                jpegQualityControl.style.display = settings.format === 'jpeg' ? 'block' : 'none';
+            }
+            if (settings.jpegQuality !== undefined) {
+                jpegQuality.value = settings.jpegQuality;
+                qualityValue.textContent = settings.jpegQuality + '%';
+            }
+        }
+
+        function saveSettings() {
+            const settings = {
+                aspectRatio: aspectRatioSelect.value,
+                mode: document.querySelector('input[name="mode"]:checked').value,
+                color: document.querySelector('input[name="color"]:checked').value,
+                customColor: customColor.value,
+                paddingAmount: paddingAmount.value,
+                format: document.querySelector('input[name="format"]:checked').value,
+                jpegQuality: jpegQuality.value
+            };
+            localStorage.setItem('instafixSettings', JSON.stringify(settings));
+        }
+
+        // Load settings on page load
+        loadSettings();
 
         // Upload area click
         uploadArea.addEventListener('click', () => fileInput.click());
@@ -179,16 +386,19 @@
         // Drag and drop
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
-            uploadArea.classList.add('border-gray-400', 'bg-gray-50');
+            const dropZone = uploadArea.querySelector('div');
+            dropZone.classList.add('border-gray-400', 'bg-gray-50');
         });
 
         uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('border-gray-400', 'bg-gray-50');
+            const dropZone = uploadArea.querySelector('div');
+            dropZone.classList.remove('border-gray-400', 'bg-gray-50');
         });
 
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
-            uploadArea.classList.remove('border-gray-400', 'bg-gray-50');
+            const dropZone = uploadArea.querySelector('div');
+            dropZone.classList.remove('border-gray-400', 'bg-gray-50');
             const file = e.dataTransfer.files[0];
             if (file && file.type.startsWith('image/')) {
                 loadImage(file);
@@ -207,18 +417,100 @@
         customColor.addEventListener('click', (e) => {
             e.stopPropagation();
             customColorRadio.checked = true;
+            if (originalImage) updatePreview();
         });
 
         customColor.addEventListener('input', () => {
             customColorRadio.checked = true;
+            if (originalImage) updatePreview();
+            saveSettings();
         });
 
-        // Mode change
+        // Live updates when settings change
+        aspectRatioSelect.addEventListener('change', () => {
+            if (aspectRatioSelect.value === 'custom') {
+                customRatioInputs.classList.remove('hidden');
+                if (!customWidth.value) customWidth.value = 16;
+                if (!customHeight.value) customHeight.value = 9;
+            } else {
+                customRatioInputs.classList.add('hidden');
+            }
+            if (originalImage) updatePreview();
+            saveSettings();
+        });
+
+        // Custom aspect ratio inputs
+        customWidth.addEventListener('input', () => {
+            if (originalImage && aspectRatioSelect.value === 'custom') updatePreview();
+        });
+
+        customHeight.addEventListener('input', () => {
+            if (originalImage && aspectRatioSelect.value === 'custom') updatePreview();
+        });
+
         document.querySelectorAll('input[name="mode"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
-                colorControls.style.display = e.target.value === 'pad' ? 'block' : 'none';
+                const isPadMode = e.target.value === 'pad';
+                colorControls.style.display = isPadMode ? 'block' : 'none';
+                paddingAmountControl.style.display = isPadMode ? 'block' : 'none';
+                if (originalImage) updatePreview();
+                saveSettings();
             });
         });
+
+        document.querySelectorAll('input[name="color"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (originalImage) updatePreview();
+                saveSettings();
+            });
+        });
+
+        // Padding amount slider
+        paddingAmount.addEventListener('input', () => {
+            paddingValue.textContent = paddingAmount.value + '%';
+            if (originalImage) updatePreview();
+            saveSettings();
+        });
+
+        // File format selection
+        document.querySelectorAll('input[name="format"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                jpegQualityControl.style.display = e.target.value === 'jpeg' ? 'block' : 'none';
+                saveSettings();
+            });
+        });
+
+        // JPEG quality slider
+        jpegQuality.addEventListener('input', () => {
+            qualityValue.textContent = jpegQuality.value + '%';
+            saveSettings();
+        });
+
+        // Canvas click to view full size
+        canvasWrapper.addEventListener('click', () => {
+            if (originalImage) {
+                showFullImage();
+            }
+        });
+
+        // Close modal
+        closeModal.addEventListener('click', () => {
+            imageModal.classList.remove('active');
+        });
+
+        imageModal.addEventListener('click', (e) => {
+            if (e.target === imageModal) {
+                imageModal.classList.remove('active');
+            }
+        });
+
+        function showFullImage() {
+            // Copy canvas content to modal
+            modalCanvas.width = canvas.width;
+            modalCanvas.height = canvas.height;
+            modalCtx.drawImage(canvas, 0, 0);
+            imageModal.classList.add('active');
+        }
 
         function loadImage(file) {
             const reader = new FileReader();
@@ -226,8 +518,10 @@
                 const img = new Image();
                 img.onload = () => {
                     originalImage = img;
-                    controls.classList.add('active');
-                    canvasContainer.classList.remove('active');
+                    uploadArea.classList.add('hidden');
+                    imagePreview.classList.remove('hidden');
+                    controls.classList.remove('opacity-50', 'pointer-events-none');
+                    updatePreview();
                 };
                 img.src = e.target.result;
             };
@@ -235,11 +529,16 @@
         }
 
         function parseAspectRatio(ratio) {
+            if (ratio === 'custom') {
+                const w = parseFloat(customWidth.value) || 16;
+                const h = parseFloat(customHeight.value) || 9;
+                return w / h;
+            }
             const [w, h] = ratio.split(':').map(Number);
             return w / h;
         }
 
-        function processImage() {
+        function updatePreview() {
             if (!originalImage) return;
 
             const mode = document.querySelector('input[name="mode"]:checked').value;
@@ -250,8 +549,6 @@
             } else {
                 padImage(targetRatio);
             }
-
-            canvasContainer.classList.add('active');
         }
 
         function cropImage(targetRatio) {
@@ -259,16 +556,13 @@
             let sourceX = 0, sourceY = 0, sourceWidth = originalImage.width, sourceHeight = originalImage.height;
 
             if (imgRatio > targetRatio) {
-                // Image is wider than target, crop sides
                 sourceWidth = originalImage.height * targetRatio;
                 sourceX = (originalImage.width - sourceWidth) / 2;
             } else {
-                // Image is taller than target, crop top/bottom
                 sourceHeight = originalImage.width / targetRatio;
                 sourceY = (originalImage.height - sourceHeight) / 2;
             }
 
-            // Set canvas to target ratio with max width of 1080 (Instagram max)
             const maxWidth = 1080;
             canvas.width = maxWidth;
             canvas.height = maxWidth / targetRatio;
@@ -286,7 +580,6 @@
             let canvasWidth, canvasHeight, imgWidth, imgHeight, x, y;
 
             if (imgRatio > targetRatio) {
-                // Image is wider, fit to width
                 canvasWidth = maxWidth;
                 canvasHeight = maxWidth / targetRatio;
                 imgWidth = maxWidth;
@@ -294,7 +587,6 @@
                 x = 0;
                 y = (canvasHeight - imgHeight) / 2;
             } else {
-                // Image is taller or same, fit to height
                 canvasHeight = maxWidth / targetRatio;
                 canvasWidth = maxWidth;
                 imgHeight = canvasHeight;
@@ -309,49 +601,93 @@
                 y = (canvasHeight - imgHeight) / 2;
             }
 
+            // Apply padding amount (scale down the image)
+            const paddingPercent = parseInt(paddingAmount.value) / 100;
+            const scale = 1 - paddingPercent;
+            imgWidth *= scale;
+            imgHeight *= scale;
+            x = (canvasWidth - imgWidth) / 2;
+            y = (canvasHeight - imgHeight) / 2;
+
             canvas.width = canvasWidth;
             canvas.height = canvasHeight;
 
-            // Get selected color
             const selectedColor = document.querySelector('input[name="color"]:checked').value;
 
             if (selectedColor === 'blur') {
-                // Create blurred background
                 ctx.filter = 'blur(20px)';
                 ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
                 ctx.filter = 'none';
 
-                // Add semi-transparent overlay
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             } else {
-                // Solid color background
                 const bgColor = selectedColor === 'custom' ? customColor.value : selectedColor;
                 ctx.fillStyle = bgColor;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
 
-            // Draw original image on top
             ctx.drawImage(originalImage, x, y, imgWidth, imgHeight);
         }
 
+        function getImageDataURL() {
+            const format = document.querySelector('input[name="format"]:checked').value;
+            if (format === 'jpeg') {
+                const quality = parseFloat(jpegQuality.value) / 100;
+                return canvas.toDataURL('image/jpeg', quality);
+            }
+            return canvas.toDataURL('image/png');
+        }
+
         function downloadImage() {
+            const format = document.querySelector('input[name="format"]:checked').value;
             const link = document.createElement('a');
-            link.download = 'instafix-' + Date.now() + '.png';
-            link.href = canvas.toDataURL('image/png');
+            link.download = 'instafix-' + Date.now() + '.' + format;
+            link.href = getImageDataURL();
             link.click();
+        }
+
+        async function copyToClipboard() {
+            try {
+                const format = document.querySelector('input[name="format"]:checked').value;
+                const blob = await new Promise(resolve => {
+                    if (format === 'jpeg') {
+                        const quality = parseFloat(jpegQuality.value) / 100;
+                        canvas.toBlob(resolve, 'image/jpeg', quality);
+                    } else {
+                        canvas.toBlob(resolve, 'image/png');
+                    }
+                });
+
+                await navigator.clipboard.write([
+                    new ClipboardItem({ [blob.type]: blob })
+                ]);
+
+                // Show success feedback
+                const originalText = copyBtnText.textContent;
+                copyBtnText.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyBtnText.textContent = originalText;
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy to clipboard. Try downloading instead.');
+            }
         }
 
         function reset() {
             originalImage = null;
-            controls.classList.remove('active');
-            canvasContainer.classList.remove('active');
+            uploadArea.classList.remove('hidden');
+            imagePreview.classList.add('hidden');
+            controls.classList.add('opacity-50', 'pointer-events-none');
             fileInput.value = '';
+            paddingAmount.value = 0;
+            paddingValue.textContent = '0%';
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
-        processBtn.addEventListener('click', processImage);
         downloadBtn.addEventListener('click', downloadImage);
+        copyBtn.addEventListener('click', copyToClipboard);
         resetBtn.addEventListener('click', reset);
     </script>
 </body>
