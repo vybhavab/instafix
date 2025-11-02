@@ -639,8 +639,38 @@
             return canvas.toDataURL('image/png');
         }
 
-        function downloadImage() {
+        async function downloadImage() {
             const format = document.querySelector('input[name="format"]:checked').value;
+            
+            // Try to use Web Share API on mobile devices (allows saving to Photos on iOS)
+            if (navigator.share && navigator.canShare) {
+                try {
+                    const blob = await new Promise(resolve => {
+                        if (format === 'jpeg') {
+                            const quality = parseFloat(jpegQuality.value) / 100;
+                            canvas.toBlob(resolve, 'image/jpeg', quality);
+                        } else {
+                            canvas.toBlob(resolve, 'image/png');
+                        }
+                    });
+                    
+                    const fileName = 'instafix-' + Date.now() + '.' + format;
+                    const file = new File([blob], fileName, { type: blob.type });
+                    
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            files: [file],
+                            title: 'InstaFix Image'
+                        });
+                        return;
+                    }
+                } catch (err) {
+                    // If share fails or is cancelled, fall through to download
+                    console.log('Share cancelled or failed:', err);
+                }
+            }
+            
+            // Fallback to standard download
             const link = document.createElement('a');
             link.download = 'instafix-' + Date.now() + '.' + format;
             link.href = getImageDataURL();
