@@ -4,31 +4,21 @@ compatibility_date = "2024-11-01"
 # Pages configuration
 pages_build_output_dir = "."
 
-# This is a static site with no build step
-[build]
-command = ""
-cwd = ""
-
 # Custom headers for optimal caching and performance
 [[rules]]
 globs = ["**/*.html"]
 [rules.headers]
 Cache-Control = "public, max-age=0, must-revalidate"
-X-Content-Type-Options = "nosniff"
-X-Frame-Options = "SAMEORIGIN"
-X-XSS-Protection = "1; mode=block"
 
 [[rules]]
 globs = ["**/*.js"]
 [rules.headers]
 Cache-Control = "public, max-age=31536000, immutable"
-X-Content-Type-Options = "nosniff"
 
 [[rules]]
 globs = ["**/*.css"]
 [rules.headers]
 Cache-Control = "public, max-age=31536000, immutable"
-X-Content-Type-Options = "nosniff"
 
 [[rules]]
 globs = ["**/*.{jpg,jpeg,png,gif,svg,ico,webp}"]
@@ -39,5 +29,8 @@ Cache-Control = "public, max-age=31536000, immutable"
 [[headers]]
 for = "/*"
 [headers.values]
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "SAMEORIGIN"
+X-XSS-Protection = "1; mode=block"
 Referrer-Policy = "strict-origin-when-cross-origin"
 Permissions-Policy = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
