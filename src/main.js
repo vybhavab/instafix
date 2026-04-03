@@ -57,8 +57,9 @@ function getRenderOptions(image, canvas) {
 }
 
 function toggleControlsEnabled(enabled) {
-  elements.controls.classList.toggle('opacity-50', !enabled);
-  elements.controls.classList.toggle('pointer-events-none', !enabled);
+  elements.copyBtn.disabled = !enabled;
+  elements.downloadBtn.disabled = !enabled;
+  elements.resetBtn.disabled = !enabled;
 }
 
 function syncCustomRatioUI() {
