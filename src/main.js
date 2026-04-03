@@ -2,6 +2,7 @@ import {
   buildOutputFilename,
   canvasToBlob,
   getDesqueezeValue,
+  getDistortionAmount,
   renderImageToCanvas
 } from './image-processing.js';
 import {
@@ -18,6 +19,7 @@ import {
   getWorkflow,
   isPadMode
 } from './dom.js';
+import { getLensProfile, getLensProfiles } from './lens-profiles.js';
 import { loadSettings, saveSettings } from './settings.js';
 
 const state = {
@@ -27,6 +29,13 @@ const state = {
 
 function getCurrentImageRecord() {
   return state.loadedImages[state.currentImageIndex] || null;
+}
+
+function populateLensProfileOptions() {
+  const options = getLensProfiles().map((profile) => (
+    `<option value="${profile.id}">${profile.label}</option>`
+  ));
+  elements.lensProfile.innerHTML = options.join('');
 }
 
 function getRenderOptions(image, canvas) {
@@ -41,7 +50,9 @@ function getRenderOptions(image, canvas) {
     paddingPercent: parseInt(elements.paddingAmount.value, 10) / 100,
     selectedColor: getSelectedColor(),
     customColor: elements.customColor.value,
-    desqueezeFactor: getDesqueezeValue(elements.desqueezeFactor.value)
+    desqueezeFactor: getDesqueezeValue(elements.desqueezeFactor.value),
+    lensProfileId: elements.lensProfile.value,
+    distortionAmount: getDistortionAmount(elements.distortionAmount.value)
   };
 }
 
@@ -81,12 +92,25 @@ function updateExportActionText() {
     : '';
 }
 
+function syncDistortionValueText() {
+  elements.distortionValue.textContent = `${getDistortionAmount(elements.distortionAmount.value)}`;
+}
+
+function syncLensCorrectionUI() {
+  const profile = getLensProfile(elements.lensProfile.value);
+  const hasProfile = profile.id !== 'none';
+  elements.distortionAmountControl.classList.toggle('hidden', !hasProfile);
+  elements.lensProfileHelp.textContent = profile.helpText;
+  syncDistortionValueText();
+}
+
 function syncWorkflowUI() {
   const showAspectControls = getWorkflow() === 'aspect';
   elements.aspectControls.classList.toggle('hidden', !showAspectControls);
   elements.desqueezeControls.classList.toggle('hidden', showAspectControls);
   elements.colorControls.style.display = showAspectControls && isPadMode() ? 'block' : 'none';
   elements.paddingAmountControl.style.display = showAspectControls && isPadMode() ? 'block' : 'none';
+  syncLensCorrectionUI();
   updateExportActionText();
 }
 
@@ -102,7 +126,9 @@ function collectSettings() {
     paddingAmount: elements.paddingAmount.value,
     format: getSelectedFormat(),
     jpegQuality: elements.jpegQuality.value,
-    desqueezeFactor: elements.desqueezeFactor.value
+    desqueezeFactor: elements.desqueezeFactor.value,
+    lensProfile: elements.lensProfile.value,
+    distortionAmount: elements.distortionAmount.value
   };
 }
 
@@ -163,7 +189,24 @@ function applyLoadedSettings() {
     elements.desqueezeFactor.value = settings.desqueezeFactor;
   }
 
+  if (settings.lensProfile) {
+    elements.lensProfile.value = settings.lensProfile;
+  }
+
+  const lensProfile = getLensProfile(elements.lensProfile.value);
+
+  if (settings.desqueezeFactor === undefined && lensProfile.id !== 'none') {
+    elements.desqueezeFactor.value = lensProfile.defaultDesqueezeFactor.toFixed(2);
+  }
+
+  if (settings.distortionAmount !== undefined) {
+    elements.distortionAmount.value = settings.distortionAmount;
+  } else if (lensProfile.id !== 'none') {
+    elements.distortionAmount.value = `${lensProfile.defaultDistortionAmount}`;
+  }
+
   elements.jpegQualityControl.style.display = getSelectedFormat() === 'jpeg' ? 'block' : 'none';
+  syncDistortionValueText();
   syncCustomRatioUI();
   syncWorkflowUI();
 }
@@ -252,6 +295,8 @@ function getExportTargets() {
 async function buildOutputFiles() {
   const format = getSelectedFormat();
   const desqueezeFactor = getDesqueezeValue(elements.desqueezeFactor.value);
+  const lensProfileId = elements.lensProfile.value;
+  const distortionAmount = getDistortionAmount(elements.distortionAmount.value);
   const targets = getExportTargets();
   const files = [];
 
@@ -259,7 +304,14 @@ async function buildOutputFiles() {
     const outputCanvas = document.createElement('canvas');
     renderImageToCanvas(getRenderOptions(imageRecord.image, outputCanvas));
     const blob = await canvasToBlob(outputCanvas, format, parseFloat(elements.jpegQuality.value));
-    const fileName = buildOutputFilename(imageRecord.name, getWorkflow(), desqueezeFactor, format);
+    const fileName = buildOutputFilename(
+      imageRecord.name,
+      getWorkflow(),
+      desqueezeFactor,
+      format,
+      lensProfileId,
+      distortionAmount
+    );
     files.push(new File([blob], fileName, { type: blob.type }));
   }
 
@@ -439,6 +491,26 @@ function attachEvents() {
     });
   });
 
+  elements.lensProfile.addEventListener('change', () => {
+    const profile = getLensProfile(elements.lensProfile.value);
+
+    if (profile.id !== 'none') {
+      elements.desqueezeFactor.value = profile.defaultDesqueezeFactor.toFixed(2);
+      elements.distortionAmount.value = `${profile.defaultDistortionAmount}`;
+      syncDistortionValueText();
+    }
+
+    syncLensCorrectionUI();
+    if (getCurrentImageRecord() && getWorkflow() === 'desqueeze') updatePreview();
+    persistSettings();
+  });
+
+  elements.distortionAmount.addEventListener('input', () => {
+    syncDistortionValueText();
+    if (getCurrentImageRecord() && getWorkflow() === 'desqueeze') updatePreview();
+    persistSettings();
+  });
+
   document.querySelectorAll('input[name="format"]').forEach((input) => {
     input.addEventListener('change', (event) => {
       elements.jpegQualityControl.style.display = event.target.value === 'jpeg' ? 'block' : 'none';
@@ -472,6 +544,7 @@ function attachEvents() {
   elements.resetBtn.addEventListener('click', reset);
 }
 
+populateLensProfileOptions();
 applyLoadedSettings();
 toggleControlsEnabled(false);
 attachEvents();

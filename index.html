@@ -11,7 +11,7 @@
   <div class="max-w-7xl mx-auto">
     <div class="text-center mb-12">
       <h1 class="text-4xl font-bold text-gray-900 mb-2">InstaFix</h1>
-      <p class="text-gray-600">Adjust images for any aspect ratio</p>
+      <p class="text-gray-600">Adjust aspect ratios, de-squeeze anamorphic shots, and correct supported lenses</p>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -173,6 +173,19 @@
               <button type="button" data-desqueeze-factor="1.50" class="desqueeze-preset px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all">1.5x</button>
               <button type="button" data-desqueeze-factor="1.80" class="desqueeze-preset px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all">1.8x</button>
               <button type="button" data-desqueeze-factor="2.00" class="desqueeze-preset px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all">2.0x</button>
+            </div>
+            <div class="pt-2 border-t border-gray-200">
+              <label for="lensProfile" class="block text-sm font-medium text-gray-900 mb-2">Lens Profile</label>
+              <select id="lensProfile" class="w-full rounded-lg border-gray-300 border px-4 py-2.5 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all"></select>
+              <p id="lensProfileHelp" class="mt-2 text-sm text-gray-500">Select a supported lens profile to apply distortion correction after de-squeeze.</p>
+            </div>
+            <div id="distortionAmountControl" class="hidden">
+              <label class="block text-sm font-medium text-gray-900 mb-3">
+                Distortion Correction
+                <span id="distortionValue" class="text-gray-500 font-normal">0</span>
+              </label>
+              <input type="range" id="distortionAmount" min="0" max="20" value="0" class="w-full">
+              <p class="mt-2 text-sm text-gray-500">Higher values apply more barrel-distortion correction.</p>
             </div>
           </div>
 

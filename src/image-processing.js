@@ -1,3 +1,6 @@
+import { renderLensCorrectedImage } from './lens-correction.js';
+import { getLensProfile } from './lens-profiles.js';
+
 const MAX_WIDTH = 1080;
 
 export function parseAspectRatio(ratio, customWidthValue, customHeightValue) {
@@ -13,6 +16,10 @@ export function parseAspectRatio(ratio, customWidthValue, customHeightValue) {
 
 export function getDesqueezeValue(rawValue) {
   return Math.max(0.5, parseFloat(rawValue) || 1.33);
+}
+
+export function getDistortionAmount(rawValue) {
+  return Math.max(0, parseInt(rawValue, 10) || 0);
 }
 
 export function renderCropImage({ image, canvas, ctx, targetRatio }) {
@@ -99,9 +106,35 @@ export function renderPadImage({
   ctx.drawImage(image, x, y, imageWidth, imageHeight);
 }
 
-export function renderDesqueezedImage({ image, canvas, ctx, desqueezeFactor }) {
-  canvas.width = Math.max(1, Math.round(image.width * desqueezeFactor));
-  canvas.height = image.height;
+export function renderDesqueezedImage({
+  image,
+  canvas,
+  ctx,
+  desqueezeFactor,
+  lensProfileId,
+  distortionAmount
+}) {
+  const outputWidth = Math.max(1, Math.round(image.width * desqueezeFactor));
+  const outputHeight = image.height;
+  const lensProfile = getLensProfile(lensProfileId);
+
+  if (lensProfile.id !== 'none' && distortionAmount > 0) {
+    const didRender = renderLensCorrectedImage({
+      image,
+      canvas,
+      ctx,
+      outputWidth,
+      outputHeight,
+      distortionAmount
+    });
+
+    if (didRender) {
+      return;
+    }
+  }
+
+  canvas.width = outputWidth;
+  canvas.height = outputHeight;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 }
@@ -117,12 +150,21 @@ export function renderImageToCanvas({
   paddingPercent,
   selectedColor,
   customColor,
-  desqueezeFactor
+  desqueezeFactor,
+  lensProfileId,
+  distortionAmount
 }) {
   const ctx = canvas.getContext('2d');
 
   if (workflow === 'desqueeze') {
-    renderDesqueezedImage({ image, canvas, ctx, desqueezeFactor });
+    renderDesqueezedImage({
+      image,
+      canvas,
+      ctx,
+      desqueezeFactor,
+      lensProfileId,
+      distortionAmount
+    });
     return;
   }
 
@@ -164,13 +206,23 @@ export function getOutputExtension(format) {
   return format === 'jpeg' ? 'jpg' : 'png';
 }
 
-export function buildOutputFilename(sourceName, workflow, desqueezeFactor, format) {
+export function buildOutputFilename(
+  sourceName,
+  workflow,
+  desqueezeFactor,
+  format,
+  lensProfileId,
+  distortionAmount
+) {
   const baseName = sourceName.replace(/\.[^.]+$/, '') || 'instafix';
   const outputExtension = getOutputExtension(format);
 
   if (workflow === 'desqueeze') {
     const factorLabel = desqueezeFactor.toFixed(2).replace(/\.?0+$/, '');
-    return `${baseName}-desqueezed-${factorLabel}x.${outputExtension}`;
+    const correctedSuffix = lensProfileId && lensProfileId !== 'none' && distortionAmount > 0
+      ? '-corrected'
+      : '';
+    return `${baseName}-desqueezed-${factorLabel}x${correctedSuffix}.${outputExtension}`;
   }
 
   return `${baseName}-instafix.${outputExtension}`;
